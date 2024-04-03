@@ -3,6 +3,7 @@ import { useCartStore } from "../../stores/useCartStore";
 import { useProductsStore } from "../../stores/useProductsStore";
 import { convertToUSCurrency } from "../../utils/helpers";
 import emptyCartImage from "../../assets/empty-cart.png";
+import { ErrorScreen } from "../../components/error";
 
 export const Cart = () => {
   const items = useCartStore((state) => state.items);
@@ -11,6 +12,7 @@ export const Cart = () => {
   const { getItemStock } = useProductsStore();
   const total = useCartStore((state) => state.total);
   const [stock, setStock] = useState({});
+  const error = useCartStore((state) => state.error);
 
   useEffect(() => {
     const fetchStock = async () => {
@@ -22,6 +24,8 @@ export const Cart = () => {
 
     fetchStock();
   }, [items, getItemStock]);
+
+  if (error) return <ErrorScreen error={error.toString()} />;
 
   if (items.length === 0) {
     return (

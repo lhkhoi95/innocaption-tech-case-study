@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { makeApiCall } from "../utils/helpers";
 
 export const useCartStore = create((set, get) => ({
   items: [],
@@ -17,43 +18,39 @@ export const useCartStore = create((set, get) => ({
   addItem: async (product) => {
     set({ isLoading: true, error: null });
 
-    // Get a list of products in the cart. Only get the id and quantity fields.
+    // Get a list of products in the cart.
     const currentItems = get().items;
 
-    // Check if the product is already in the cart.
-    const existingItem = currentItems.find((item) => item.id === product.id);
+    // Map over the current items.
+    let updatedItems = currentItems.map((item) => {
+      // If the item is the product, return a new object with the quantity incremented.
+      if (item.id === product.id) {
+        return { ...item, quantity: item.quantity + 1 };
+      }
 
-    let updatedItems = [];
-    if (existingItem) {
-      // If the product is already in the cart, increment its quantity.
-      updatedItems = currentItems.map((item) =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-      );
-    } else {
-      // If the product is not in the cart, add it with a quantity of 1.
-      updatedItems = [...currentItems, { id: product.id, quantity: 1 }];
+      // Otherwise, return the item as is.
+      return item;
+    });
+
+    // If the product is not in the cart, add it with a quantity of 1.
+    if (!updatedItems.find((item) => item.id === product.id)) {
+      updatedItems = [...updatedItems, { id: product.id, quantity: 1 }];
     }
 
     // Sort the updatedItems array by the id property.
     updatedItems.sort((a, b) => a.id - b.id);
 
     try {
-      const requestBody = JSON.stringify({
+      const requestBody = {
         userId: 1,
         products: updatedItems,
-      });
+      };
 
-      const response = await fetch("https://dummyjson.com/carts/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: requestBody,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to add item to cart");
-      }
-
-      const data = await response.json();
+      const data = await makeApiCall(
+        "https://dummyjson.com/carts/add",
+        "POST",
+        requestBody
+      );
 
       set({
         items: data.products,
@@ -79,23 +76,17 @@ export const useCartStore = create((set, get) => ({
       )
       .filter((item) => item.quantity > 0);
 
-    const requestBody = JSON.stringify({
+    const requestBody = {
       merge: false,
       products: updatedItems,
-    });
+    };
 
     try {
-      const response = await fetch("https://dummyjson.com/carts/1", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: requestBody,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update quantity");
-      }
-
-      const data = await response.json();
+      const data = await makeApiCall(
+        "https://dummyjson.com/carts/1",
+        "PUT",
+        requestBody
+      );
 
       set({
         items: data.products,

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { makeApiCall } from "../utils/helpers";
 
 export const useProductsStore = create((set, get) => ({
   products: [],
@@ -12,13 +13,14 @@ export const useProductsStore = create((set, get) => ({
 
   getItemStock: async (productId) => {
     try {
-      const response = await fetch(
-        `https://dummyjson.com/products/${productId}?select=stock`
+      const data = await makeApiCall(
+        `https://dummyjson.com/products/${productId}?select=stock`,
+        "GET"
       );
-      const data = await response.json();
       return data.stock;
     } catch (error) {
       console.error("Failed to fetch product stock:", error);
+      set({ error: error });
     }
   },
 
@@ -29,13 +31,7 @@ export const useProductsStore = create((set, get) => ({
       const params = { skip: get().skip, limit: get().limit };
       url.search = new URLSearchParams(params).toString();
 
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (!response.ok) {
-        set({ error: data.message || "Something went wrong", loading: false });
-        return;
-      }
+      const data = await makeApiCall(url, "GET");
 
       const currentProductIds = get().products.map((product) => product.id);
       const newProducts = data.products.filter(
@@ -49,20 +45,24 @@ export const useProductsStore = create((set, get) => ({
         skip: state.skip + state.limit,
       }));
     } catch (error) {
-      set({ error: error, loading: false });
+      set({ error: error });
+      set({ loading: false });
     }
   },
 
   fetchCategories: async () => {
     try {
-      const response = await fetch("https://dummyjson.com/products/categories");
-      const data = await response.json();
+      const data = await makeApiCall(
+        "https://dummyjson.com/products/categories",
+        "GET"
+      );
       const formattedCategories = data.map(
         (category) => category.charAt(0).toUpperCase() + category.slice(1)
       );
       set({ categories: formattedCategories });
     } catch (error) {
       console.error("Failed to fetch categories:", error);
+      set({ error: error });
     }
   },
 
@@ -87,24 +87,19 @@ export const useProductsStore = create((set, get) => ({
     }
 
     try {
-      const response = await fetch(url);
-      const data = await response.json();
-      // If query and selectedCategory are not empty, filter the products to match both constraints.
+      const data = await makeApiCall(url, "GET");
+
+      let filteredProducts = data.products.filter(
+        (product) => product.stock > 0
+      );
+
+      // Filter products by query
       if (query && selectedCategory) {
-        set({
-          searchedProducts: data.products.filter(
-            (product) =>
-              product.stock > 0 &&
-              product.title.toLowerCase().includes(query.toLowerCase())
-          ),
-        });
-      } else {
-        set({
-          searchedProducts: data.products.filter(
-            (product) => product.stock > 0
-          ),
-        });
+        filteredProducts = filteredProducts.filter((product) =>
+          product.title.toLowerCase().includes(query.toLowerCase())
+        );
       }
+      set({ searchedProducts: filteredProducts });
     } catch (error) {
       console.error("Failed to search products:", error);
     }
