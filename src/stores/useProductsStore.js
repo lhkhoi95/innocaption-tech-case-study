@@ -56,9 +56,11 @@ export const useProductsStore = create((set, get) => ({
         "https://dummyjson.com/products/categories",
         "GET"
       );
-      const formattedCategories = data.map(
-        (category) => category.charAt(0).toUpperCase() + category.slice(1)
-      );
+
+      const formattedCategories = data.map((category) => {
+        return category.name;
+      });
+
       set({ categories: formattedCategories });
     } catch (error) {
       console.error("Failed to fetch categories:", error);
